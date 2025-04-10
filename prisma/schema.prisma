@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String // e.g., 'admin' or 'user'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id                String    @id @default(cuid())
+  name              String
+  email             String?
+  phone             String?
+  address           String?
+  externalCustomerId String?  @unique
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  invoices          Invoice[]
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  customerId        String
+  externalInvoiceId String?       @unique
+  total             Decimal
+  status            String        @default("pending") // e.g., 'pending', 'paid', 'overdue'
+  dueDate           DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  customer          Customer      @relation(fields: [customerId], references: [id])
+  items             InvoiceItem[]
+  auditLogs         InvoiceAuditLog[]
+  emailReminders    EmailReminder[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Decimal
+  amount      Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model InvoiceAuditLog {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  field       String   // e.g., 'status', 'amount', 'dueDate'
+  oldValue    String
+  newValue    String
+  changedAt   DateTime @default(now())
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model EmailReminder {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  sentAt      DateTime @default(now())
+  status      String   @default("pending") // e.g., 'pending', 'sent', 'failed'
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
